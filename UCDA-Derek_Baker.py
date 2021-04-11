@@ -44,3 +44,13 @@ cv_df.isna().sum()
 # Find out how many vaccines are given daily to all countries
 total_daily_vac = cv_df.groupby("date")["daily_vaccinations"].sum()
 print(total_daily_vac) # Not sure if the numbers are balancing will investigate in the next session
+
+# Find out how many days each country has received vaccinations
+cv_df_group_daily_vacs = cv_df[['country', 'daily_vaccinations']].groupby("country")
+cv_df_daily_vacs_by_country = total_daily_vac.agg('count').sort_values("daily_vaccinations", ascending=False)
+print(cv_df_daily_vacs_by_country)
+
+# Create a dataframe from the df_cv dataframe to store statistical information which will be used to merge with the GDP by country
+cv_df_grp = cv_df[['country', 'daily_vaccinations']].groupby("country").describe()
+# Add the total vaccinations by country to cv_df_grp
+cv_df_grp["Total"] = cv_df.groupby("country")["daily_vaccinations"].sum()
