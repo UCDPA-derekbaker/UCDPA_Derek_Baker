@@ -3,6 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 import geopandas as gpd
+import numpy as np
 
 # Read in Country Vaccinations CSV and store it as a dataframe called cv_df
 cv_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\cov19\\country_vaccinations.csv', parse_dates=["date"], index_col=["date"]).sort_index()
@@ -45,6 +46,7 @@ cv_df_daily_vacs_by_country = total_daily_vac.agg('count').sort_values("daily_va
 print(cv_df_daily_vacs_by_country)
 
 # Create a dataframe from the df_cv dataframe to store statistical information which will be used to merge with the GDP by country
-cv_df_grp = cv_df[['country', 'daily_vaccinations']].groupby("country").describe()
-# Add the total vaccinations by country to cv_df_grp
-cv_df_grp["Total"] = cv_df.groupby("country")["daily_vaccinations"].sum()
+cv_df_grp = cv_df.groupby("country")["daily_vaccinations"].agg([np.min, np.max, np.mean, np.median, np.sum])
+
+
+
