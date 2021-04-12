@@ -46,7 +46,14 @@ cv_df_daily_vacs_by_country = total_daily_vac.agg('count').sort_values("daily_va
 print(cv_df_daily_vacs_by_country)
 
 # Create a dataframe from the df_cv dataframe to store statistical information which will be used to merge with the GDP by country
-cv_df_grp = cv_df.groupby("country")["daily_vaccinations"].agg([np.min, np.max, np.mean, np.median, np.sum])
+cv_df_grp = cv_df.groupby(["country","iso_code"]).agg({'daily_vaccinations': [np.min, np.max, np.mean, np.median, np.sum]}).reset_index()
 
 
+# Now pivot the dataset and reduce the countries to match the cv_df dataset
+# Even though the  inner join would reduce the columns returned for gdp_df any, if this was a large dataset,
+# if would improve the performance going forward
+gdp_df_reduced = gdp_df[gdp_df["Country"].isin(cv_countries)]
 
+# Pivot the dataframe using .melt and replace missing values with the pad method so that the latest year of data
+# will be populated for all countries
+gdp_pivot = gdp_df_reduced.melt(id_vars=["Country","Country Code"], value_name="gdp").fillna(method="pad")
