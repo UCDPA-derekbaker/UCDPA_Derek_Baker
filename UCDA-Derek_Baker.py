@@ -49,6 +49,9 @@ print(cv_df_daily_vacs_by_country)
 cv_df_grp = cv_df.groupby(["country","iso_code"]).agg({'daily_vaccinations': [np.min, np.max, np.mean, np.median, np.sum]}).reset_index()
 
 
+# Import gdp per capita csv
+gdp_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\GDP.csv')
+
 # Now pivot the dataset and reduce the countries to match the cv_df dataset
 # Even though the  inner join would reduce the columns returned for gdp_df any, if this was a large dataset,
 # if would improve the performance going forward
