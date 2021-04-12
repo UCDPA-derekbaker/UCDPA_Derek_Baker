@@ -1,4 +1,4 @@
-# Import the packages needed to run the code in this file
+## Import the packages needed to run the code in this file
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -41,22 +41,47 @@ total_daily_vac = cv_df.groupby("date")["daily_vaccinations"].sum()
 print(total_daily_vac) # Data is accurate
 
 # Find out how many days each country has received vaccinations
-cv_df_group_daily_vacs = cv_df[['country', 'daily_vaccinations']].groupby("country")
-cv_df_daily_vacs_by_country = total_daily_vac.agg('count').sort_values("daily_vaccinations", ascending=False)
+cv_df_daily_vacs_by_country = cv_df.groupby('country').count()['daily_vaccinations']
 print(cv_df_daily_vacs_by_country)
 
 # Create a dataframe from the df_cv dataframe to store statistical information which will be used to merge with the GDP by country
-cv_df_grp = cv_df.groupby(["country","iso_code"]).agg({'daily_vaccinations': [np.min, np.max, np.mean, np.median, np.sum]}).reset_index()
-
+cv_df_grp = cv_df.groupby(["country","iso_code"]).agg(
+    {'daily_vaccinations': [np.min, np.max, np.mean, np.median, np.sum, np.count_nonzero]}).reset_index()
+# Give the columns proper names
+cv_df_grp.columns = ["Country", "Country Code", "Daily_Min", "Daily_Max", "Daily_Mean", "Daily_Median", "Daily_Sum", "Days_Administered"]
 
 # Import gdp per capita csv
 gdp_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\GDP.csv')
 
 # Now pivot the dataset and reduce the countries to match the cv_df dataset
-# Even though the  inner join would reduce the columns returned for gdp_df any, if this was a large dataset,
-# if would improve the performance going forward
-gdp_df_reduced = gdp_df[gdp_df["Country"].isin(cv_countries)]
+# Even though the inner join would reduce the columns returned for gdp_df merging to cv_df, if this was a large dataset,
+# it would improve the performance going forward
+cv_countries = cv_df_grp["Country Code"].unique()
+gdp_df_reduced = gdp_df[gdp_df["Country Code"].isin(cv_countries)]
 
 # Pivot the dataframe using .melt and replace missing values with the pad method so that the latest year of data
-# will be populated for all countries
-gdp_pivot = gdp_df_reduced.melt(id_vars=["Country","Country Code"], value_name="gdp").fillna(method="pad")
+# will be populated for all countries and set the column names for the pivoted columns
+gdp_pivot = gdp_df_reduced.melt(id_vars=["Country", "Country Code"]
+                                , var_name="Year", value_name="GDP").fillna(method="pad")
+
+# Create a gdp_2018 dataframe to contain the data from gdp_pivot with just values for the year 2018
+gdp_2018 = gdp_pivot[gdp_pivot["Year"] == "2018"]
+
+################################################
+
+# Find latest population stats to get vaccinations per capita
+pop_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\WorldPopulation.csv')
+# Reduce the dataset for speed
+pop_df_reduced = pop_df[pop_df["Country Code"].isin(cv_countries)]
+# There is no missing values for 2019 so .fillna(method="pad") is not required
+# Keep only Country Code and the latest year in the dataset
+pop_2019 = pop_df_reduced[["Country Code", "2019"]]
+# Rename the column "2019" to "Population"
+pop_2019.rename(columns={'2019': 'Population'})
+
+
+# merge the data from gdp_2018, cv_df_grp and pop_2019 (Default inner so left out how="inner")
+cv_gdp_pop = pd.merge(pd.merge(cv_df_grp, gdp_2018, on='Country Code'), pop_2019, on='Country Code')
+
+#  Add a column to get vaccines per capita
+cv_gdp_pop["Vac_per_Capita"] = cv_gdp_pop["Daily_Sum"] / cv_gdp_pop["Population"]
