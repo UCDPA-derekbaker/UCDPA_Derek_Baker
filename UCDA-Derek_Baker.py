@@ -6,25 +6,28 @@ import geopandas as gpd
 import numpy as np
 import os
 
+# set working directory incorrectly to test the function setting the correct working directory
+os.chdir("C:\\Users\\derek.baker\\PycharmProjects")
+
 # Create function to set the correct working directory
 def main(enter_path):
     print("Current Working Directory ", os.getcwd())
     try:
+        if os.getcwd() == enter_path:
+            print("Directory is already set to that path")
         # Change the current working Directory
-        os.chdir(enter_path)
-        print("Directory changed")
+        else:
+            os.chdir(enter_path)
+            print("Directory changed")
     except OSError:
         print("Can't change the Current Working Directory")
     print("Current Working Directory ", os.getcwd())
-    # Check if New path exists
-    if os.path.exists(enter_path):
-        # Change the current working Directory
-        os.chdir(enter_path)
-    else:
-        print("Can't change the Current Working Directory")
-    print("Current Working Directory ", os.getcwd())
+
 if __name__ == '__main__':
+    # please enter your working directory
     main("C:\\Users\\derek.baker\\PycharmProjects\\UCDA2")
+
+print("\nStart importing and transforming CSV and JSON files\n")
 
 # Read in Country Vaccinations CSV and store it as a dataframe called cv_df
 cv_df = pd.read_csv('cov19\\country_vaccinations.csv',
@@ -73,35 +76,55 @@ cv_df_grp = cv_df.groupby(["country", "iso_code"]).agg(
 cv_df_grp.columns = ["Country", "Country Code", "Daily_Min", "Daily_Max",
                      "Daily_Mean", "Daily_Median", "Daily_Sum", "Days_Administered"]
 
+print("\nFinished importing and transforming Vaccines CSV\n")
+
 # Import gdp per capita csv
 gdp_df = pd.read_csv('GDP.csv')
 
-# Now pivot the dataset and reduce the countries to match the cv_df dataset
-# Even though the inner join would reduce the columns returned for gdp_df merging to cv_df, if this was a large dataset,
-# it would improve the performance going forward
-cv_countries = cv_df_grp["Country Code"].unique()
-gdp_df_reduced = gdp_df[gdp_df["Country Code"].isin(cv_countries)]
-
 # Pivot the dataframe using .melt and replace missing values with the pad method so that the latest year of data
 # will be populated for all countries and set the column names for the pivoted columns
-gdp_pivot = gdp_df_reduced.melt(id_vars=["Country", "Country Code"],
+gdp_pivot = gdp_df.melt(id_vars=["Country", "Country Code"],
                                 var_name="Year", value_name="GDP").fillna(method="pad")
 
 # Create a gdp_2018 dataframe to contain the data from gdp_pivot with just values for the year 2018
 gdp_2018 = gdp_pivot[gdp_pivot["Year"] == "2018"]
 
+# Create a gdp_levels for categorisation purposes
+gdp_levels = gdp_2018[gdp_2018["Country"].isin(
+    ["Low income", "Lower middle income", "Middle income", "Upper middle income ", "High income"])]
+
+# Create a column in gdp_2018 with categorisation set by gdp_levels
+# create a list of our conditions values set by looking at the values in gdp_levels - will try to automate this
+conditions = [
+    (gdp_2018['GDP'] < 2287.8),
+    (gdp_2018['GDP'] >= 2287.8) & (gdp_2018['GDP'] < 7655.1),
+    (gdp_2018['GDP'] >= 7655.1) & (gdp_2018['GDP'] < 12983.2),
+    (gdp_2018['GDP'] >= 12983.2) & (gdp_2018['GDP'] < 19028.9),
+    (gdp_2018['GDP'] >= 19028.9)
+    ]
+
+# create a list of the values we want to assign for each condition
+values = ["Lowest income", "Low income", "Lower middle income", "Middle income", "High income"]
+
+# create a new column and use np.select to assign values to it using our lists as arguments
+gdp_2018['GDP Category'] = np.select(conditions, values)
+
+# Check gdp for new column
+gdp_2018.head()
+
+
+print("\nFinished importing and transforming gdp CSV\n")
 
 # Find latest population stats to get vaccinations per capita
 pop_df = pd.read_csv('WorldPopulation.csv')
 
-# Reduce the dataset for speed
-pop_df_reduced = pop_df[pop_df["Country Code"].isin(cv_countries)]
-print(pop_df_reduced.info())
 # There are no missing values for 2019 so .fillna(method="pad") is not required
 # Keep only Country Code and the latest year in the dataset
-pop_2019 = pop_df_reduced[["Country Code", "2019"]]
+pop_2019 = pop_df[["Country Code", "2019"]]
 # Rename the column "2019" to "Population"
 pop_2019 = pop_2019.rename(columns={'2019': 'Population'})
+
+print("\n Finished importing and transforming population CSV \n")
 
 # Create a geodataframe of world countries
 geo_loc = gpd.read_file('cov19\\world_countries.json')
@@ -116,12 +139,10 @@ print(cv_gdp_pop_geo.info())
 
 # Drop duplicate columns
 cv_gdp_pop_geo.drop(["Country_x", "Country Code", "Country_y"], axis='columns', inplace=True)
-# Fill empty cells with "", not zero to avoid incorrect regression stats
-cv_gdp_pop_geo.fillna("", inplace=True)
+
 
 #  Add a column to get vaccines per capita
 cv_gdp_pop_geo["Vac_per_Capita"] = cv_gdp_pop_geo["Daily_Sum"] / cv_gdp_pop_geo["Population"]
 
 
-print(""
-      "Datasets added and cleaned with no problems")
+print("\n Datasets added transformed and merged with no problems \n")
