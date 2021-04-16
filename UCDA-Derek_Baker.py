@@ -4,9 +4,30 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import geopandas as gpd
 import numpy as np
+import os
+
+# Create function to set the correct working directory
+def main(enter_path):
+    print("Current Working Directory ", os.getcwd())
+    try:
+        # Change the current working Directory
+        os.chdir(enter_path)
+        print("Directory changed")
+    except OSError:
+        print("Can't change the Current Working Directory")
+    print("Current Working Directory ", os.getcwd())
+    # Check if New path exists
+    if os.path.exists(enter_path):
+        # Change the current working Directory
+        os.chdir(enter_path)
+    else:
+        print("Can't change the Current Working Directory")
+    print("Current Working Directory ", os.getcwd())
+if __name__ == '__main__':
+    main("C:\\Users\\derek.baker\\PycharmProjects\\UCDA2")
 
 # Read in Country Vaccinations CSV and store it as a dataframe called cv_df
-cv_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\cov19\\country_vaccinations.csv',
+cv_df = pd.read_csv('cov19\\country_vaccinations.csv',
                     parse_dates=["date"], index_col=["date"]).sort_index()
 
 # Inspect the dataframe
@@ -53,7 +74,7 @@ cv_df_grp.columns = ["Country", "Country Code", "Daily_Min", "Daily_Max",
                      "Daily_Mean", "Daily_Median", "Daily_Sum", "Days_Administered"]
 
 # Import gdp per capita csv
-gdp_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\GDP.csv')
+gdp_df = pd.read_csv('GDP.csv')
 
 # Now pivot the dataset and reduce the countries to match the cv_df dataset
 # Even though the inner join would reduce the columns returned for gdp_df merging to cv_df, if this was a large dataset,
@@ -71,7 +92,7 @@ gdp_2018 = gdp_pivot[gdp_pivot["Year"] == "2018"]
 
 
 # Find latest population stats to get vaccinations per capita
-pop_df = pd.read_csv('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\WorldPopulation.csv')
+pop_df = pd.read_csv('WorldPopulation.csv')
 
 # Reduce the dataset for speed
 pop_df_reduced = pop_df[pop_df["Country Code"].isin(cv_countries)]
@@ -83,7 +104,7 @@ pop_2019 = pop_df_reduced[["Country Code", "2019"]]
 pop_2019 = pop_2019.rename(columns={'2019': 'Population'})
 
 # Create a geodataframe of world countries
-geo_loc = gpd.read_file('C:\\Users\\derek.baker\\PycharmProjects\\UCDA2\\cov19\\world_countries.json')
+geo_loc = gpd.read_file('cov19\\world_countries.json')
 
 # merge the data from gdp_2018, cv_df_grp, pop_2019 and geo_loc making the geo_loc the dataset to keep all rows from regardless of any data from the other dataframes
 cv_gdp_pop_geo = pd.merge(pd.merge(pd.merge(cv_df_grp, gdp_2018, on='Country Code'), pop_2019, on='Country Code'),
