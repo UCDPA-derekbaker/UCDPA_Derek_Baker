@@ -170,3 +170,59 @@ cv_gdp_pop_loc.drop(["centre", "geometry"], axis="columns", inplace=True)
 
 print("\n Datasets added transformed and merged with no problems \n")
 
+######################################################################
+
+
+###########################################
+# Explore the data #
+###########################################
+
+# Find out how many vaccines are given daily to all countries
+total_daily_vac = cv_df.groupby("date")["daily_vaccinations"].sum()
+total_daily_vac = pd.DataFrame(total_daily_vac)
+print(total_daily_vac)
+
+# Check how many counties had recorded vaccinations
+print(len(cv_df_grp))
+
+
+###########################################
+#  Visualisations #
+###########################################
+
+# Import the tools need to do the visualisations #
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Set a GDP category order list for use in visualisations
+GDP_Cat_order=["Fragile", "Low income", "Lower middle income", "Middle income", "High income"]
+
+## Fig. 1 ##
+# Simple Count plot showing days administered by GDP category
+sns.countplot(x="GDP_Category", order=GDP_Cat_order, data=cv_gdp)
+plt.xticks(rotation=10)
+plt.title("Mean days administered by GDP category")
+plt.xlabel("GDP Category")
+plt.ylabel("Mean of days administered")
+plt.show()
+
+
+# Barplot - Below visual not used, I could not order the axis with the GDP_Cat_order list but it gives the same output as
+# the code for Fig. 1
+
+# Extract the unique GDP categories
+GDP_Categories = cv_gdp_pop_geo["GDP_Category"].unique()
+fig, ax = plt.subplots()
+# Loop over the different GDP income categories
+for category in GDP_Categories:
+    GDP_C = cv_gdp_pop_geo[cv_gdp_pop_geo["GDP_Category"] == category]
+    # Add a bar chart for the "Days_Administered" column
+    ax.bar(category, GDP_C["Days_Administered"].mean())
+# Customise the plot
+ax.set_ylabel("Days Administered")
+ax.set_xticklabels(GDP_Categories, rotation=10)
+ax.set_title("Days Administered by GDP Category")
+ax.set_xticklabels(order=GDP_Cat_order)
+plt.show()
+# Save the figure to file
+fig.savefig("Mean_Days_Administered_by_Category_Bar_Chart.png")
