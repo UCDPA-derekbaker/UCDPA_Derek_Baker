@@ -110,6 +110,7 @@ cv_gdp = pd.merge(cv_df_grp, gdp_2018, on="Country Code")
 
 print("\nFinished importing and transforming gdp CSV\n")
 ########################################################
+
 # Find latest population stats to get vaccinations per capita
 pop_df = pd.read_csv('WorldPopulation.csv')
 
@@ -195,10 +196,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Set a GDP category order list for use in visualisations
-GDP_Cat_order=["Fragile", "Low income", "Lower middle income", "Middle income", "High income"]
+GDP_Cat_order = ["Fragile", "Low income", "Lower middle income", "Middle income", "High income"]
 
+###########################################
 ## Fig. 1 ##
-# Simple Count plot showing days administered by GDP category
+###########################################
+# Simple Seaborn Count plot showing days administered by GDP category
 sns.countplot(x="GDP_Category", order=GDP_Cat_order, data=cv_gdp)
 plt.xticks(rotation=10)
 plt.title("Mean days administered by GDP category")
@@ -206,23 +209,20 @@ plt.xlabel("GDP Category")
 plt.ylabel("Mean of days administered")
 plt.show()
 
-
-# Barplot - Below visual not used, I could not order the axis with the GDP_Cat_order list but it gives the same output as
-# the code for Fig. 1
-
-# Extract the unique GDP categories
-GDP_Categories = cv_gdp_pop_geo["GDP_Category"].unique()
-fig, ax = plt.subplots()
-# Loop over the different GDP income categories
-for category in GDP_Categories:
-    GDP_C = cv_gdp_pop_geo[cv_gdp_pop_geo["GDP_Category"] == category]
-    # Add a bar chart for the "Days_Administered" column
-    ax.bar(category, GDP_C["Days_Administered"].mean())
-# Customise the plot
-ax.set_ylabel("Days Administered")
-ax.set_xticklabels(GDP_Categories, rotation=10)
-ax.set_title("Days Administered by GDP Category")
-ax.set_xticklabels(order=GDP_Cat_order)
+###########################################
+## Fig. 2 ##
+###########################################
+# Box plot with whiskers set to 5th and 95th percentiles and customise the style
+# for days administered for each category
+sns.set_palette("RdBu")
+sns.set_context("paper")
+sns.set_style("darkgrid")
+chart = sns.catplot(x="GDP_Category", y="Days_Administered",
+            data=cv_gdp_pop_geo,
+            kind="box",
+            order=GDP_Cat_order,
+            whis=[5,95])
+chart.fig.suptitle("Days administered for each category")
+chart.set(xlabel="GDP Category", ylabel="Days Administered")
+plt.xticks(rotation=10)
 plt.show()
-# Save the figure to file
-fig.savefig("Mean_Days_Administered_by_Category_Bar_Chart.png")
