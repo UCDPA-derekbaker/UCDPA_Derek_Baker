@@ -145,6 +145,8 @@ cv_gdp_pop_geo.drop(["Country_x", "Country Code", "Country_y"], axis="columns", 
 #  Add a column to get vaccines per capita
 cv_gdp_pop_geo["Vac_per_Capita"] = cv_gdp_pop_geo["Daily_Sum"] / cv_gdp_pop_geo["Population"]
 
+
+
 # Convert cv_gdp_pop_geo to a Geodataframe
 geo_cv_gdp_pop_loc = gpd.GeoDataFrame(cv_gdp_pop_geo, crs="EPSG:4326", geometry=cv_gdp_pop_geo["geometry"])
 
@@ -186,15 +188,21 @@ print(total_daily_vac)
 # Check how many counties had recorded vaccinations
 print(len(cv_df_grp))
 
+
 ## Create risk factor analysis
 # Risk factor
-cv_gdp_pop_geo["Risk Factor"] = cv_gdp_pop_geo["Population"] * cv_gdp_pop_geo["Density"] / 1000000000
+cv_gdp_pop_geo["Risk_Factor"] = cv_gdp_pop_geo["Population"] * cv_gdp_pop_geo["Density"] / 1000000000
 # Current risk factor - Going with the assumption that two vaccine doses are needed, I divide vac_per_capita by 2
 cv_gdp_pop_geo["Current_Risk_Factor"] = cv_gdp_pop_geo["Risk_Factor"] * (1 - (cv_gdp_pop_geo["Vac_per_Capita"]/2))
 # Risk reduced by
-cv_gdp_pop_geo["Risk_ Factor_Reduced"] = 1 - cv_gdp_pop_geo["Current_Risk_Factor"] / cv_gdp_pop_geo["Risk_Factor"]
+cv_gdp_pop_geo["Risk_Factor_Reduced"] = 1 - cv_gdp_pop_geo["Current_Risk_Factor"] / cv_gdp_pop_geo["Risk_Factor"]
 
-
+# Add the risk analysis to cv_gdp_pop_loc for bokeh analysis
+cv_gdp_pop_loc["Risk_Factor"] = cv_gdp_pop_loc["Population"] * cv_gdp_pop_loc["Density"] / 1000000000
+# Current risk factor - Going with the assumption that two vaccine doses are needed, I divide vac_per_capita by 2
+cv_gdp_pop_loc["Current_Risk_Factor"] = cv_gdp_pop_loc["Risk_Factor"] * (1 - (cv_gdp_pop_loc["Vac_per_Capita"]/2))
+# Risk reduced by
+cv_gdp_pop_loc["Risk_Factor_Reduced"] = 1 - cv_gdp_pop_loc["Current_Risk_Factor"] / cv_gdp_pop_loc["Risk_Factor"]
 ###########################################
 #  Visualisations #
 ###########################################
@@ -207,9 +215,8 @@ import matplotlib.pyplot as plt
 GDP_Cat_order=["Fragile", "Low income", "Lower middle income", "Middle income", "High income"]
 
 ###########################################
-## Fig. 1 ##
+## Fig. 1 ## Matplotlib and seaborn
 ###########################################
-
 
 # Simple Seaborn Count plot showing days administered by GDP category
 plt.subplot(2, 2, 1)
@@ -220,20 +227,69 @@ plt.xlabel("GDP Category")
 plt.ylabel("Count of Countries")
 # Activate the middle subplot
 plt.subplot(2, 2, 2)
-sns.barplot(x="GDP_Category", y="Days_Administered", data=cv_gdp_pop_geo, order=GDP_Cat_order)
+sns.barplot(x="GDP_Category", y="Days_Administered", data=cv_gdp, order=GDP_Cat_order)
 plt.title('Days Administered Regression on GDP')
 plt.xlabel('GDP')
 plt.ylabel("Days Administered")
 # Activate the bottom subplot
 plt.subplot(2, 2, 3)
-sns.regplot(x="GDP", y="Days_Administered", data=cv_gdp_pop_geo, color="#FFB000")
+sns.regplot(x="GDP", y="Days_Administered", data=cv_gdp, color="#FFB000")
 plt.title('Days Administered Regression on GDP')
 plt.xlabel('GDP')
 plt.ylabel("Days Administered")
 # Polynomial regression
 plt.subplot(2, 2, 4)
-sns.regplot(data=cv_gdp, x="GDP", y="Days_Administered", order=2)
+sns.regplot(data=cv_gdp_pop_geo, x="GDP", y="Vac_per_Capita", order=2)
 plt.title("Polynomial regression vac per capita on GDP")
 plt.xlabel("GDP")
-plt.ylabel("Days Administered")
+plt.ylabel("Vac per Capita")
 plt.show()
+
+###########################################
+## Fig. 2 ## bokeh
+###########################################
+
+# Bokeh - try to add Select menu into this model p280+
+# Import bokeh tools #
+from bokeh.plotting import figure
+from bokeh.io import output_file, show, curdoc, output_notebook
+from bokeh.plotting import figure, ColumnDataSource
+from bokeh.layouts import row, column, widgetbox
+from bokeh.models import CategoricalColorMapper, Slider, Select, HoverTool
+
+# Create figure one with x axis type set as datetime #
+p1 = figure(x_axis_type="datetime", x_axis_label='Date', y_axis_label='Vaccinations',
+            tools=["box_select", "crosshair", "pan", "wheel_zoom"])
+
+# Plot date along the x axis and vaccinations along the y axis
+p1.line(total_daily_vac.index, total_daily_vac["daily_vaccinations"])
+hover1 = HoverTool(tooltips=None, mode="hline")
+p1.add_tools(hover1)
+
+# Create the second figure #
+# Convert cv_gdp_pop_loc to a ColumnDataSource: source
+source = ColumnDataSource(cv_gdp_pop_loc)
+
+# Make a CategoricalColorMapper object: color_mapper
+color_mapper = CategoricalColorMapper(
+    factors=["Fragile", "Low income", "Lower middle income", "Middle income", "High income"],
+    palette=["red", "orange", "blue", "green", "yellow"])
+
+p2 = figure(tools=["box_select", "pan", "wheel_zoom"], x_axis_label='GDP', y_axis_label='Current Risk Factor')
+# Plot vaccinations along the x axis and density along the y axis
+p2.circle("GDP", "Current_Risk_Factor", selection_color="black", source=source,
+          nonselection_alpha=0.1, color=dict(field='GDP_Category', transform=color_mapper))
+# Create and add the hover tool for the second visual
+hover2 = HoverTool(tooltips=[("name", "@name"),
+                             ("GDP_Category", "@GDP_Category"),
+                             ("Risk_Factor", "@Risk_Factor"),
+                             ("Current_Risk_Factor", "@Current_Risk_Factor"),
+                             ("Risk_Factor_Reduced", "@Risk_Factor_Reduced")])
+p2.add_tools(hover2)
+
+# Create the third figure #
+p3 = figure(tools=["box_select", "pan", "wheel_zoom"], x_axis_label='GDP', y_axis_label='Risk Factor Reduced')
+# Plot date along the x axis and vaccinations along the y axis
+p3.circle("GDP", "Risk_Factor_Reduced",  selection_color="black", source=source,
+          nonselection_alpha=0.1, color=dict(field='GDP_Category', transform=color_mapper),
+          legend_group="GDP_Category")
