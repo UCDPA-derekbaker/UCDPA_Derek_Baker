@@ -293,3 +293,14 @@ p3 = figure(tools=["box_select", "pan", "wheel_zoom"], x_axis_label='GDP', y_axi
 p3.circle("GDP", "Risk_Factor_Reduced",  selection_color="black", source=source,
           nonselection_alpha=0.1, color=dict(field='GDP_Category', transform=color_mapper),
           legend_group="GDP_Category")
+p3.legend.location = "top_right"
+p3.legend.background_fill_color = "darkgray"
+p3.add_tools(hover2)
+
+# Link figure 2 to figure 3 on the x axis
+p2.x_range = p3.x_range
+
+# Name of the output file and show the result
+output_file('row.html')
+layout = row(p1, p2, p3)
+show(layout)
