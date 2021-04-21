@@ -186,6 +186,14 @@ print(total_daily_vac)
 # Check how many counties had recorded vaccinations
 print(len(cv_df_grp))
 
+## Create risk factor analysis
+# Risk factor
+cv_gdp_pop_geo["Risk Factor"] = cv_gdp_pop_geo["Population"] * cv_gdp_pop_geo["Density"] / 1000000000
+# Current risk factor - Going with the assumption that two vaccine doses are needed, I divide vac_per_capita by 2
+cv_gdp_pop_geo["Current_Risk_Factor"] = cv_gdp_pop_geo["Risk_Factor"] * (1 - (cv_gdp_pop_geo["Vac_per_Capita"]/2))
+# Risk reduced by
+cv_gdp_pop_geo["Risk_ Factor_Reduced"] = 1 - cv_gdp_pop_geo["Current_Risk_Factor"] / cv_gdp_pop_geo["Risk_Factor"]
+
 
 ###########################################
 #  Visualisations #
@@ -196,33 +204,36 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Set a GDP category order list for use in visualisations
-GDP_Cat_order = ["Fragile", "Low income", "Lower middle income", "Middle income", "High income"]
+GDP_Cat_order=["Fragile", "Low income", "Lower middle income", "Middle income", "High income"]
 
 ###########################################
 ## Fig. 1 ##
 ###########################################
-# Simple Seaborn Count plot showing days administered by GDP category
-sns.countplot(x="GDP_Category", order=GDP_Cat_order, data=cv_gdp)
-plt.xticks(rotation=10)
-plt.title("Mean days administered by GDP category")
-plt.xlabel("GDP Category")
-plt.ylabel("Mean of days administered")
-plt.show()
 
-###########################################
-## Fig. 2 ##
-###########################################
-# Box plot with whiskers set to 5th and 95th percentiles and customise the style
-# for days administered for each category
-sns.set_palette("RdBu")
-sns.set_context("paper")
-sns.set_style("darkgrid")
-chart = sns.catplot(x="GDP_Category", y="Days_Administered",
-            data=cv_gdp_pop_geo,
-            kind="box",
-            order=GDP_Cat_order,
-            whis=[5,95])
-chart.fig.suptitle("Days administered for each category")
-chart.set(xlabel="GDP Category", ylabel="Days Administered")
-plt.xticks(rotation=10)
+
+# Simple Seaborn Count plot showing days administered by GDP category
+plt.subplot(2, 2, 1)
+sns.countplot(x="GDP_Category", order=GDP_Cat_order, data=cv_gdp)
+#plt.xticks(rotation=10)
+plt.title("Count of Countries by GDP category")
+plt.xlabel("GDP Category")
+plt.ylabel("Count of Countries")
+# Activate the middle subplot
+plt.subplot(2, 2, 2)
+sns.barplot(x="GDP_Category", y="Days_Administered", data=cv_gdp_pop_geo, order=GDP_Cat_order)
+plt.title('Days Administered Regression on GDP')
+plt.xlabel('GDP')
+plt.ylabel("Days Administered")
+# Activate the bottom subplot
+plt.subplot(2, 2, 3)
+sns.regplot(x="GDP", y="Days_Administered", data=cv_gdp_pop_geo, color="#FFB000")
+plt.title('Days Administered Regression on GDP')
+plt.xlabel('GDP')
+plt.ylabel("Days Administered")
+# Polynomial regression
+plt.subplot(2, 2, 4)
+sns.regplot(data=cv_gdp, x="GDP", y="Days_Administered", order=2)
+plt.title("Polynomial regression vac per capita on GDP")
+plt.xlabel("GDP")
+plt.ylabel("Days Administered")
 plt.show()
