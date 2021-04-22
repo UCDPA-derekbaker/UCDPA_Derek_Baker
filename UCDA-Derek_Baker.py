@@ -349,28 +349,90 @@ geo_cv_gdp_pop_loc.plot( "Days_Administered", legend = True, cmap ="RdYlGn", fig
 ######################################
 
 ## folium ##
-m = folium.Map(location=[20, 0], tiles="OpenStreetMap", zoom_start=2)
+# Create an empty map
+world = folium.Map(location=[20, 0], tiles="OpenStreetMap", zoom_start=2)
+# display(world)
 
-# Tokyo stadium marker
-Tokyo_Stadium = folium.Marker(location=[35.67785955, 139.71351420013758], popup="Tokyo Stadium").add_to(m)
-display(m)
+# Create countries risk dataframe
+top_risk = pd.merge(geo_cv_gdp_pop_loc[["lng", "lat", "id", "name", "geometry"]],
+                    cv_gdp_pop_geo[["Risk_Factor", "Current_Risk_Factor", "Risk_Factor_Reduced", "id"]],
+                    on="id")
+# Sort the dataframe by risk factor for iterating the top 10
+top_risk = top_risk.sort_values("Risk_Factor", ascending=False).reset_index(drop=True)
 
-# PLace text on the map stating 2020 olympics
-folium.Marker(
-      location=[Japan_geo['lat'], Japan_geo['lng']],
-      popup=Japan_geo['name'],
-      icon=folium.DivIcon(html=f"""<div style="font-family: courier new; color: blue">{"2020 Olympic Games"}</div>""")
-   ).add_to(m)
+# Create a choropleth and add it to the map
+folium.Choropleth(
+geo_data=top_risk,
+data=top_risk,
+columns=['id',"Risk_Factor"],
+key_on="feature.properties.id",
+fill_color='RdYlGn_r',
+fill_opacity=1,
+line_opacity=0.2,
+legend_name="Risk_Factor",
+smooth_factor=0,
+Highlight= True,
+line_color = "#0000",
+name = "name",
+show=False,
+overlay=True,
+nan_fill_color = "gray"
+).add_to(world)
+# display(world)
 
+# add marker one by one on the map for the top ten most at risk countries
+for i in range(0, 10):
+   folium.Marker(
+      location=[top_risk.iloc[i]['lat'], top_risk.iloc[i]['lng']],
+      popup="Current Risk Factor: " + str(top_risk.iloc[i]["Current_Risk_Factor"]),
+       tooltip=top_risk.iloc[i]["name"],
+       icon=folium.Icon(color='orange')
+   ).add_to(world)
+# display(world)
+
+# The olypics are starting soon but will they be ready? They're 8th most at risk out of the 110 countries listed
 # Create Japan Geodataframe
 # Create a list object Japan
 Japan = ["Japan"]
 # Find Japan
 Japan_row = geo_cv_gdp_pop_loc["name"].isin(Japan)
 Japan_geo = geo_cv_gdp_pop_loc[Japan_row]
+
 # Add the geometry shape of Japan to the interactive map
-folium.GeoJson(Japan_geo.geometry).add_to(m)
-display(m)
+folium.GeoJson(Japan_geo.geometry).add_to(world)
+# display(world)
+
+# PLace text on the map stating "2020 olympic Games"
+folium.Marker(
+      location=[Japan_geo['lat'], Japan_geo['lng']],
+      popup=Japan_geo['name'],
+      icon=folium.DivIcon(html=f"""<div style="font-family: courier new; color: orange">{"2020 Olympic Games"}</div>""")
+   ).add_to(world)
+# display(world)
+
+# Tokyo stadium marker
+Tokyo_Stadium = folium.Marker(location=[35.67785955, 139.71351420013758], tooltip="Tokyo Stadium", icon=folium.Icon(color='orange')).add_to(world)
+# display(world)
+
+
+# India is the most at risk country
+# Create India Geodataframe
+# Create a list object Japan
+India = ["India"]
+# Find Japan
+India_row = geo_cv_gdp_pop_loc["name"].isin(India)
+India_geo = geo_cv_gdp_pop_loc[India_row]
+
+# Add the geometry shape of Japan to the interactive map
+folium.GeoJson(India_geo.geometry).add_to(world)
+# display(world)
+
+# PLace text on the map stating "Most at risk Country"
+folium.Marker(
+      location=[India_geo['lat'], India_geo['lng']],
+      icon=folium.DivIcon(html=f"""<div style="font-family: courier new; color: red">{"Most at risk country!"}</div>""")
+   ).add_to(world)
+display(world)
 
 
 ########################################
