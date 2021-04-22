@@ -169,7 +169,8 @@ geo_cv_gdp_pop_loc["centre"] = geo_cv_gdp_pop_loc.geometry.centroid
 # The Bokeh visual won't allow me to to use the geo_cv_gdp_pop_loc dataframe, "Point is not JSON serializable"
 # so I'll drop "centre" from the dataframe
 cv_gdp_pop_loc = geo_cv_gdp_pop_loc
-cv_gdp_pop_loc.drop(["centre", "geometry"], axis="columns", inplace=True)
+
+cv_gdp_pop_loc = cv_gdp_pop_loc.drop(["centre", "geometry"], axis="columns")
 
 print("\n Datasets added transformed and merged with no problems \n")
 
@@ -304,3 +305,72 @@ p2.x_range = p3.x_range
 output_file('row.html')
 layout = row(p1, p2, p3)
 show(layout)
+
+###########################################
+## Fig. 3 ##
+###########################################
+# Geospatial visuals #
+# Import the tools needed for geospatial visuals #
+import folium
+
+# from shapely.geometry import Point
+# from IPython import display
+
+# Now create the Lat and lng columns from the center column in the geo_cv_gdp_pop_loc dataframe #
+# Create two lists for the loop results to be placed
+lat = []
+lng = []
+# For each row in a varible,
+for row in geo_cv_gdp_pop_loc['centre']:
+    # Try to,
+    try:
+        # Split the row by comma and append
+        # everything before the comma to lat
+        lat.append(row.y)
+        # Split the row by comma and append
+        # everything after the comma to lon
+        lng.append(row.x)
+    # But if you get an error
+    except:
+        # append a missing value to lat
+        lat.append(np.NaN)
+        # append a missing value to lon
+        lng.append(np.NaN)
+# Create two new columns from lat and lon
+geo_cv_gdp_pop_loc["lat"] = lat
+geo_cv_gdp_pop_loc["lng"] = lng
+
+
+# Plot the map with colouring by area
+geo_cv_gdp_pop_loc.plot( "Days_Administered", legend = True, cmap ="RdYlGn", figsize=(15,20))
+
+######################################
+## Fig. 4
+######################################
+
+## folium ##
+m = folium.Map(location=[20, 0], tiles="OpenStreetMap", zoom_start=2)
+
+# Tokyo stadium marker
+Tokyo_Stadium = folium.Marker(location=[35.67785955, 139.71351420013758], popup="Tokyo Stadium").add_to(m)
+display(m)
+
+# PLace text on the map stating 2020 olympics
+folium.Marker(
+      location=[Japan_geo['lat'], Japan_geo['lng']],
+      popup=Japan_geo['name'],
+      icon=folium.DivIcon(html=f"""<div style="font-family: courier new; color: blue">{"2020 Olympic Games"}</div>""")
+   ).add_to(m)
+
+# Create Japan Geodataframe
+# Create a list object Japan
+Japan = ["Japan"]
+# Find Japan
+Japan_row = geo_cv_gdp_pop_loc["name"].isin(Japan)
+Japan_geo = geo_cv_gdp_pop_loc[Japan_row]
+# Add the geometry shape of Japan to the interactive map
+folium.GeoJson(Japan_geo.geometry).add_to(m)
+display(m)
+
+
+########################################
